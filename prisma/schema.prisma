@@ -1,1 +1,140 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String?
+  email         String?        @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role           @default(USER)
+  xp            Int            @default(1250)
+  streak        Int            @default(12)
+  level         Int            @default(28)
+  accounts      Account[]
+  sessions      Session[]
+  vocabularies  Vocabulary[]
+  lessons       Lesson[]
+  posts         Post[]
+  progress      UserProgress[]
+  activities    ActivityLog[]
+  createdAt     DateTime       @default(now())
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model HskWord {
+  id        String         @id @default(cuid())
+  hanzi     String
+  pinyin    String
+  meaning   String
+  level     Int
+  example   String?
+  progress  UserProgress[]
+}
+
+model UserProgress {
+  id         String   @id @default(cuid())
+  userId     String
+  hskWordId  String
+  interval   Int      @default(1)
+  repetition Int      @default(0)
+  easeFactor Float    @default(2.5)
+  dueDate    DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hskWord    HskWord  @relation(fields: [hskWordId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, hskWordId])
+}
+
+model Vocabulary {
+  id        String   @id @default(cuid())
+  hanzi     String
+  pinyin    String
+  meaning   String
+  example   String?
+  tag       String?
+  level     String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Lesson {
+  id          String   @id @default(cuid())
+  title       String
+  wordCount   Int      @default(0)
+  isPublic    Boolean  @default(true)
+  hskLevel    String   @default("HSK 3")
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  author    String
+  roleBadge String   @default("Thành viên")
+  content   String
+  timeAgo   String
+  likes     Int      @default(0)
+  comments  Int      @default(0)
+  shares    Int      @default(0)
+  hskBadge  String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  detail    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
